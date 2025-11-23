@@ -63,9 +63,7 @@ venv/
 coverage.xml
 htmlcov/
 
-# FastAPI / DB / data for local development (ignore runtime DBs and uploaded files)
-/portfolio-rag-backend/db/*.sqlite3
-/portfolio-rag-backend/db/**
+#  data for local development
 /portfolio-rag-backend/data/
 
 # Jupyter
