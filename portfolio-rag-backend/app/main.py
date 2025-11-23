@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 load_dotenv()
 
@@ -16,7 +16,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL_NAME = os.getenv("AI_MODEL_NAME", "gpt-5-nano")
 
 DB_PATH = "db"
-embedding_function = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embedding_function = OpenAIEmbeddings(model_name="text-embedding-3-small")
 db = Chroma(persist_directory=DB_PATH, embedding_function=embedding_function)
 
 # CORS middleware setup

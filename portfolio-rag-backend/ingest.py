@@ -1,9 +1,12 @@
 import os
+from dotenv import load_dotenv
 from langchain_community.document_loaders.text import TextLoader
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
+
+load_dotenv()
 
 DATA_FOLDER = "data"
 DB_PATH = "db"
@@ -45,7 +48,7 @@ def main():
     # Create embeddings and store in ChromaDB
     print(" Creating embeddings... (This may take a while)")
 
-    embedding_function = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
 
     db = Chroma.from_documents(
         documents=chunks,
