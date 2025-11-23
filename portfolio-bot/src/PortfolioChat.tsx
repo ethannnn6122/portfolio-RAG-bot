@@ -1,78 +1,31 @@
-import React, { useState } from "react";
-import { CreateMLCEngine } from "@mlc-ai/web-llm";
+import React, { useEffect, useRef, useState } from "react";
 import styles from "./PortfolioChat.module.css";
 
 // Config
-const BACKEND_URL = "http://localhost:8000/retrieve-context";
-const MODEL_ID = "Mistral-7B-Instruct-v0.3-q4f16_1-MLC";
-
-type Role = "assistant" | "user" | "system";
-
-interface ChatMessage {
-  role: Role;
-  content: string;
-}
+const BACKEND_URL = "http://localhost:8000/chat";
 
 const PortfolioChat: React.FC = () => {
-	const [messages, setMessages] = useState<ChatMessage[]>([
+	const [messages, setMessages] = useState([
 		{ role: "assistant", content: "Hello! Ask me anything about Ethan's portfolio."}
 	]);
 	const [input, setInput] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(false);
-	const [engine, setEngine] = useState<any | null>(null);
-	const [downloadProgress, setDownloadProgress] = useState<string>("");
-	const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
-	const [showStartModal, setShowStartModal] = useState<boolean>(true);
 
-    // Init the local LLM engine
-	const initEngine = async () => {
-		try {
-			setDownloadProgress("Initializing WebGPU...");
-		
-			// GPU Check Debugging
-			if (navigator.gpu) {
-				const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-				if (adapter) {
-					const info = adapter.info;
-					console.log("🚀 Adapter Info:", JSON.stringify(info, null, 2));
-				}
-			}
-
-			const eng = await CreateMLCEngine(
-				MODEL_ID,
-				{
-				initProgressCallback: (report) => {
-					setDownloadProgress(report.text);
-				},
-				}
-			);
-			
-			setEngine(eng);
-			setIsModelLoaded(true);
-			setDownloadProgress(""); 
-			console.log("Engine initialized:", eng);
-		} catch (error) {
-			console.error("Error loading model:", error);
-			setDownloadProgress("Error: Your browser may not support WebGPU.");
-		}
-  	};
-
-  	// Handler for the "Start" button
-	const handleStartChat = () => {
-		setShowStartModal(false); // Hide modal
-		initEngine(); // Start the heavy lifting
+	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const scrollToBottom = () => {
+		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	};
+	useEffect(scrollToBottom, [messages]);
 
 	const handleSend = async (): Promise<void> => {
-		if (!input.trim() || isLoading || !isModelLoaded) return;
+		if (!input.trim() || isLoading) return;
 
 		const userQuestion = input;
 		setInput("");
 		setIsLoading(true);
 
-		// Add user message to state
-		const newHistory: ChatMessage[] = [...messages, { role: "user", content: userQuestion }];
-		setMessages(newHistory);
+		setMessages(prev => [...prev, { role: "user", content: userQuestion }]);
+		setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
 		try {
 			// Fetch context from backend
@@ -81,92 +34,53 @@ const PortfolioChat: React.FC = () => {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ query: userQuestion }),
 			});
-			const data: any = await response.json();
-			const context: string = Array.isArray(data.context) ? data.context.join("\n\n") : String(data.context || "");
+			if (!response.body) throw new Error("No response body");
 
-			// Construct the RAG prompt
-			const sysPrompt = `You are a helpful assistant for Ethan's portfolio. 
-			Answer the user's question concisely using ONLY the provided context.
-			
-			IMPORTANT INSTRUCTIONS:
-			- Answer ONLY the specific question asked.
-			- Do not generate new questions.
-			- Do not make up a conversation.
-			- Stop speaking immediately after the answer.
-			
-			Context:
-			${context}`
+      // 3. Handle the Stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = "";
 
-			// Stream response from local LLM
-			const chunks: AsyncIterable<any> = await engine.chat.completions.create({
-				messages: [
-					{ role: "system", content: sysPrompt },
-					...newHistory.map(m => ({ role: m.role, content: m.content}))
-				],
-				temperature: 0.1,
-				stream: true
-			});
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-			// Process streamed chunks
-			let fullReply = "";
-			setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+        const chunk = decoder.decode(value, { stream: true });
+        fullReply += chunk;
 
-			for await (const chunk of chunks as AsyncIterable<any>) {
-				const delta: string = chunk?.choices?.[0]?.delta?.content || "";
-				fullReply += delta;
+        // Update the last message (the bot placeholder)
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = fullReply;
+          return updated;
+        });
+      }
 
-				// Update the last message with new chunk
-				setMessages((prev: ChatMessage[]) => {
-					const updated = [...prev];
-					updated[updated.length - 1] = { ...updated[updated.length - 1], content: fullReply };
-					return updated;
-				});
-			}
-		} catch (err) {
-			console.error(err);
-			setMessages(prev => [...prev, { role: "assistant", content: "Sorry, something went wrong." }]);
-		} finally {
-			setIsLoading(false);
-		}
-	};
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1].content = "Sorry, I couldn't connect to the server.";
+        return updated;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 return (
-    <div className={styles.chatContainer} style={{ position: 'relative' }}>
-	  {showStartModal && (
-		<div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <span className={styles.warningIcon}>🤖</span>
-            <h3>Load AI Assistant?</h3>
-            <p className={styles.warningText}>
-              This feature runs a real AI model directly in your browser.
-              <br/>
-              <strong>Requires ~4GB download (one-time) and a dedicated GPU.</strong>
-            </p>
-            <button className={styles.primaryButton} onClick={handleStartChat}>
-              Download & Start
-            </button>
-          </div>
-        </div>
-	  )}
-
-      {/* Loading Bar for Model Download */}
-      {!showStartModal && !isModelLoaded && (
-        <div className={styles.loader}>
-          <p>⚡ Loading AI Model...</p>
-          <small>{downloadProgress}</small>
-        </div>
-      )}
-
-      {/* Messages Area */}
-      <div className={styles.messagesArea}>
+    <div className={styles.chatContainer}>
+		<div className={styles.messagesArea}>
         {messages.map((msg, idx) => (
-          <div key={idx} className={`${styles.message} ${msg.role === 'user' ? styles.userMessage : styles.botMessage}`}>
-            {msg.content}
-          </div>
+          	<div key={idx} className={`${styles.message} ${msg.role === 'user' ? styles.userMessage : styles.botMessage}`}>
+            	{msg.content}
+         	 </div>
         ))}
-        {isLoading && <div className={styles.message}>Thinking...</div>}
-      </div>
-
+        {isLoading && !messages[messages.length-1].content && (
+          	<div className={styles.message}>Thinking...</div>
+        )}
+        	<div ref={messagesEndRef} />
+    	</div>
       {/* Input Area */}
       <div className={styles.inputArea}>
         <input
@@ -174,13 +88,16 @@ return (
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={isModelLoaded ? "Ask about my projects..." : "Waiting for model..."}
-          disabled={!isModelLoaded || isLoading}
+          placeholder="Ask about Ethan's skills..."
+          disabled={isLoading}
         />
         <button 
           className={styles.button} 
           onClick={handleSend}
-          disabled={!isModelLoaded || isLoading}>Send</button>
+          disabled={isLoading}
+        >
+          Send
+        </button>
       </div>
     </div>
   );

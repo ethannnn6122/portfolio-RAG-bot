@@ -1,15 +1,22 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import List
+from openai import OpenAI
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
+load_dotenv()
+
 app = FastAPI()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+MODEL_NAME = os.getenv("AI_MODEL_NAME", "gpt-5-nano")
 
 DB_PATH = "db"
 embedding_function = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
 db = Chroma(persist_directory=DB_PATH, embedding_function=embedding_function)
 
 # CORS middleware setup
@@ -27,16 +34,41 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-class QueryRequest(BaseModel):
+class ChatRequest(BaseModel):
     query: str
 
-@app.get("/")
-def read_root():
-    return {"status": "Portfolio RAG Backend is running."}
+@app.post("/chat")
+def chat_endpoint(request: ChatRequest):
+    print(f"☁️ Cloud Query: {request.query}")
+    
+    # A. RAG Retrieval (Get the Context)
+    results = db.similarity_search(request.query, k=5)
+    context_text = "\n\n".join([doc.page_content for doc in results])
+    
+    # B. System Prompt construction
+    system_prompt = f"""You are a helpful assistant for Ethan's portfolio.
+    Use ONLY the context below to answer the user.
+    If the answer is not in the context, say "I don't have that information."
+    
+    Context:
+    {context_text}
+    """
+    # C. Generator function for Streaming
+    def event_stream():
+        try:
+            stream = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": request.query}
+                ],
+                stream=True
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            yield f"Error: {str(e)}"
 
-@app.post("/retrieve-context")
-def retrieve_context(request: QueryRequest):
-    print(f"Received query: {request.query}")
-    results = db.similarity_search(request.query, k=10)
-    context_text = [doc.page_content for doc in results]
-    return {"context": context_text}
+    # D. Return the stream
+    return StreamingResponse(event_stream(), media_type="text/plain")
