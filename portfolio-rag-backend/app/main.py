@@ -2,8 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
 app = FastAPI()
 
@@ -37,6 +37,6 @@ def read_root():
 @app.post("/retrieve-context")
 def retrieve_context(request: QueryRequest):
     print(f"Received query: {request.query}")
-    results = db.similarity_search(request.query, k=3)
+    results = db.similarity_search(request.query, k=10)
     context_text = [doc.page_content for doc in results]
     return {"context": context_text}

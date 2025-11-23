@@ -1,8 +1,9 @@
 import os
+from langchain_community.document_loaders.text import TextLoader
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 
 DATA_FOLDER = "data"
 DB_PATH = "db"
@@ -19,25 +20,33 @@ def main():
     # Load documents
     documents = []
     for file in os.listdir(DATA_FOLDER):
+        file_path = os.path.join(DATA_FOLDER, file)
+        loader = None
         if file.endswith(".pdf"):
-            file_path = os.path.join(DATA_FOLDER, file)
-            print(f"Loading document: {file_path}")
+            print(f"Loading document: {file}")
             loader = PyPDFLoader(file_path)
+        elif file.endswith(".txt") or file.endswith(".md"):
+            print(f"Loading document: {file}")
+            loader = TextLoader(file_path)
+        
+        if loader:
             documents.extend(loader.load())
-            print(f"   Loaded: {file}")
+            print(f" Loaded: {file}")
 
     if not documents:
         print("No documents found. Add PDFs to the data folder.")
         return
     
     # Split Text into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=750, chunk_overlap=50)
     chunks = text_splitter.split_documents(documents)
     print(f" Split into {len(chunks)} chunks.")
 
     # Create embeddings and store in ChromaDB
     print(" Creating embeddings... (This may take a while)")
+
     embedding_function = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
     db = Chroma.from_documents(
         documents=chunks,
         embedding=embedding_function,

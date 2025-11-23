@@ -50,6 +50,7 @@ const PortfolioChat: React.FC = () => {
 			setEngine(eng);
 			setIsModelLoaded(true);
 			setDownloadProgress(""); 
+			console.log("Engine initialized:", eng);
 		} catch (error) {
 			console.error("Error loading model:", error);
 			setDownloadProgress("Error: Your browser may not support WebGPU.");
@@ -85,9 +86,14 @@ const PortfolioChat: React.FC = () => {
 
 			// Construct the RAG prompt
 			const sysPrompt = `You are a helpful assistant for Ethan's portfolio. 
-			Use ONLY the following context to answer the user's question. 
-			If the answer is not in the context, say you don't know.
-				
+			Answer the user's question concisely using ONLY the provided context.
+			
+			IMPORTANT INSTRUCTIONS:
+			- Answer ONLY the specific question asked.
+			- Do not generate new questions.
+			- Do not make up a conversation.
+			- Stop speaking immediately after the answer.
+			
 			Context:
 			${context}`
 
@@ -97,7 +103,7 @@ const PortfolioChat: React.FC = () => {
 					{ role: "system", content: sysPrompt },
 					...newHistory.map(m => ({ role: m.role, content: m.content}))
 				],
-				temperature: 0.5,
+				temperature: 0.1,
 				stream: true
 			});
 
@@ -146,7 +152,7 @@ return (
       {/* Loading Bar for Model Download */}
       {!showStartModal && !isModelLoaded && (
         <div className={styles.loader}>
-          <p>⚡ Loading AI Model (approx 4GB - one time only)...</p>
+          <p>⚡ Loading AI Model...</p>
           <small>{downloadProgress}</small>
         </div>
       )}

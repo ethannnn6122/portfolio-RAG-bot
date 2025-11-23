@@ -26,9 +26,7 @@ A privacy-focused, AI-powered portfolio assistant that answers questions about m
 
 ---
 
-# 🚀 Setup & Installation
-
-## Backend Setup (The Retrieval Service)
+## Setup 
 
 The backend handles document parsing and vector search.
 
@@ -39,28 +37,24 @@ cd portfolio-rag-backend
 python -m venv venv
 
 ### Activate environment
-### Windows:
-.\venv\Scripts\activate
-### Mac/Linux:
-source venv/bin/activate
+Windows: .\venv\Scripts\activate
+Mac/Linux: source venv/bin/activate
 
 ### Install dependencies
 pip install fastapi uvicorn python-dotenv langchain langchain-community chromadb pypdf sentence-transformers
 
 ### ⚠️ IMPORTANT: Add Data
-# Place your PDF files (Resume.pdf, Projects.pdf) into the `data/` folder.
+Place your PDF or txt/md files (Resume.pdf, Projects.md) into the `data/` folder.
 
 ### Run Ingestion (Creates the Database)
 python ingest.py
-### You should see: "Success! DB created at: db"
+You should see: "Success! DB created at: db"
 
 ### Start the API Server
 uvicorn app.main:app --reload
+The backend runs on port 8000
 
-### The backend runs on port 8000
-
-## FRONTEND Setup
-# Open a new terminal and navigate to frontend
+### Open a new terminal and navigate to frontend
 cd qa-bot-frontend
 
 ### Install dependencies
@@ -68,7 +62,7 @@ npm install
 
 ### Start the Development Server
 npm run dev
-### The frontend runs on port 5173
+The frontend runs on port 5173
 
 ## ⚠️ Important: GPU Performance on Laptops
 
