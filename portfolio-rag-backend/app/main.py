@@ -16,7 +16,11 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL_NAME = os.getenv("AI_MODEL_NAME", "gpt-5-nano")
 
 DB_PATH = "db"
-embedding_function = OpenAIEmbeddings(model_name="text-embedding-3-small")
+embedding_function = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    openai_api_key=os.getenv("OPENAI_API_KEY"),
+    check_embedding_ctx_length=False
+)
 db = Chroma(persist_directory=DB_PATH, embedding_function=embedding_function)
 
 # CORS middleware setup

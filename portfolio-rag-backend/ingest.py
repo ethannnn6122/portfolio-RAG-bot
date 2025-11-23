@@ -48,7 +48,10 @@ def main():
     # Create embeddings and store in ChromaDB
     print(" Creating embeddings... (This may take a while)")
 
-    embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+    embedding_function = OpenAIEmbeddings(
+        model="text-embedding-3-small",
+        openai_api_key=os.getenv("OPENAI_API_KEY") 
+    )
 
     db = Chroma.from_documents(
         documents=chunks,
