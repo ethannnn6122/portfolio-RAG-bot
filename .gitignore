@@ -1,0 +1,80 @@
+# Repository-level .gitignore for portfolio-RAG-bot
+
+# Node / JavaScript
+/node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+dist/
+build/
+.vite/
+.parcel-cache/
+/.out/
+
+# Vite / TypeScript
+*.tsbuildinfo
+
+# Env files
+.env
+.env.*.local
+.env.local
+
+# Logs
+*.log
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.DS_Store
+Thumbs.db
+
+# OS generated files
+ehthumbs.db
+Icon?
+
+# Frontend app folder (portfolio-bot)
+/portfolio-bot/node_modules/
+/portfolio-bot/dist/
+/portfolio-bot/.vite/
+
+# Python
+# Virtual environments
+/portfolio-rag-backend/venv/
+/portfolio-rag-backend/.venv/
+venv/
+.venv/
+
+# Byte-compiled / caches
+**/__pycache__/
+**/*.py[cod]
+**/*.so
+.python-version
+
+# Testing / packaging
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+htmlcov/
+
+# FastAPI / DB / data for local development (ignore runtime DBs and uploaded files)
+/portfolio-rag-backend/db/*.sqlite3
+/portfolio-rag-backend/db/**
+/portfolio-rag-backend/data/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Build artifacts
+/.next/
+/.nuxt/
+
+# Misc
+.cache/
+node_modules/
