@@ -26,7 +26,7 @@ db = Chroma(persist_directory=DB_PATH, embedding_function=embedding_function)
 # CORS middleware setup
 origins = [
     "http://localhost:5173",
-    "http://localhost:3000",
+    "https://milehighcoding.com",
     "https://www.milehighcoding.com"
 ]
 
